@@ -145,3 +145,28 @@ def test_invalid_operation():
     )
 
     assert response.status_code == 422 
+    
+def test_get_list_jobs():
+    response = client.get("/jobs")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert isinstance(data, list)
+
+def test_get_existing_job():
+    # Create a job
+    create_response = client.post("/jobs", 
+      json=job_correct_without_idempotency_key
+    )
+    job_id = create_response.json()["id"]
+
+    # Retrieve it
+    response = client.get(f"/jobs/{job_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["id"] == job_id
+    assert data["type"] == "image_resize"    
+
