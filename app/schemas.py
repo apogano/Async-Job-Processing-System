@@ -1,3 +1,5 @@
+from uuid import UUID
+from datetime import datetime
 from typing import Any, Optional, Literal
 from pydantic import BaseModel, Field
 
@@ -14,16 +16,16 @@ class ImageJobPayload(BaseModel):
 	
 class JobCreate(BaseModel):
 	type: Literal["image_resize"] = Field(examples=["image_resize"]) 
-	payload: dict[ImageJobPayload] = Field(default_factory=dict)	
+	payload: ImageJobPayload
 	idempotency_key: Optional[str] = None
 	
 class JobResponse(BaseModel):
-    id: str
+    id: UUID
     type: str
-    payload: dict[str, Any]
+    payload: ImageJobPayload
     status: str
     attempts: int
     max_attempts: int
     result: Optional[dict[str, Any]] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
