@@ -153,3 +153,39 @@ def _apply_operation(image: Image.Image, operation: dict) -> Image.Image:
         return image
     logger.warning("Unknown operation %s, skipping", op_type)
     return image
+
+@celery_app.task(name="cleanup_stale_jobs")
+def cleanup_stale_jobs(stale_after_minutes: int = 60):
+    """
+    Periodic task (scheduled via Celery Beat): finds jobs stuck in
+    'processing' for longer than 'stale_after_minutes' and marks them
+    'failed'.
+
+    Why this exists: if a worker process crashes or is killed mid-task
+    (OOM, deploy, host reboot), the job it was processing is left in
+    'processing' forever -- nothing else will ever update it, since the
+    task that was updating it no longer exists. Without this, such jobs
+    are invisible failures: they don't show up as 'failed', they just
+    silently never complete.
+    """
+    db = SessionLocal()
+    try:
+        cutoff = datetime.utcnow() - timedelta(minutes=stale_after_minutes)
+        stale_jobs = (
+            db.query(Job)
+            .filter(Job.status == JobStatus.processing, Job.updated_at < cutoff)
+            .all()
+        )
+        for job in stale_jobs:
+            job.status = JobStatus.failed
+            job.result = {
+                "error": f"job stuck in 'processing' for over {stale_after_minutes} "
+                         f"minutes -- likely an interrupted worker (crash/restart)"
+            }
+            db.add(job)
+            logger.warning("Marked stale job %s as failed (worker likely died)", job.id)
+
+        db.commit()
+        return {"stale_jobs_marked_failed": len(stale_jobs)}
+    finally:
+        db.close()

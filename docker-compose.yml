@@ -27,7 +27,30 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-
+  beat:
+    build: .
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    volumes:
+      - .:/code
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+ 
+  flower:
+    build: .
+    command: celery -A app.workers.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_started
+    
   postgres:
     image: postgres:16-alpine
     environment:
