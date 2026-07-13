@@ -13,7 +13,7 @@ from app.models.job import Job, JobStatus
 from app.models.job import Base
 
 from app.workers.tasks import _apply_operation, _mark_status
-from app.workers.tasks import process_image_job
+from app.workers.tasks import process_image_job, cleanup_stale_jobs
 
 TEST_DATABASE_URL = settings.database_url+"_test"
 
@@ -130,3 +130,7 @@ def test_process_image_job_success(mock_session, db, tmp_path):
         # Verify image was actually resized
         output = Image.open(updated_job.result["output_path"])
         assert output.size == (50, 50)
+
+@patch("app.workers.tasks.SessionLocal")
+def test_cleanup_stale_jobs(mock_session, db):
+	cleanup_stale_jobs(1)
