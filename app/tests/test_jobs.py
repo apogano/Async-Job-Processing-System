@@ -2,18 +2,25 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
+from sqlalchemy.orm import sessionmaker
 
 from app.main import app
 from app.db import get_db
 from app.config import settings
+from app.models.job import Base
+
+TEST_DATABASE_URL = settings.database_url+"_test"
+
+engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
 
 @pytest.fixture(name="session")
 def session_fixture():
-    engine = create_engine(settings.database_url, pool_pre_ping=True)
+    engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
     SQLModel.metadata.create_all(engine)
+    Base.metadata.create_all(bind=engine)
     with Session(engine) as session:
         yield session
-
+    Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(name="client")  
 def client_fixture(session: Session):  

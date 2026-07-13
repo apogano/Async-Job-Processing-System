@@ -6,6 +6,7 @@ from app.config import settings
 from app.db import init_db, get_db
 from app.schemas import JobCreate, JobResponse
 from app.models.job import Job, JobStatus
+from app.workers.tasks import process_image_job
 
 from typing import Optional
 
@@ -64,6 +65,8 @@ def create_job(job_in:JobCreate, db: Session = Depends(get_db)):
     db.add(job)
     db.commit()
     db.refresh(job)
+    
+    process_image_job.delay(str(job.id))
     
     return job
     
