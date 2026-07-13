@@ -1,5 +1,9 @@
+import os
+import shutil
+import uuid
+
 from fastapi import FastAPI
-from fastapi import FastAPI, Depends, Query, HTTPException
+from fastapi import FastAPI, Depends, Query, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -19,6 +23,7 @@ app = FastAPI(
 @app.on_event("startup")
 def on_startup():
     init_db()
+    os.makedirs(settings.upload_dir, exist_ok=True)
 
 @app.get("/health")
 async def health():
@@ -121,3 +126,14 @@ def cancel_job(job_id: str, db: Session = Depends(get_db)):
     db.delete(job)
     db.commit()
     return None
+
+@app.post("/uploads", status_code=201)
+async def upload_image(file: UploadFile = File(...)):
+    """Uploads a source image, returns the path to use in a job payload."""
+    ext = os.path.splitext(file.filename)[1] or ".png"
+    dest_name = f"{uuid.uuid4()}{ext}"
+    dest_path = os.path.join(settings.upload_dir, dest_name)
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    with open(dest_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {"path": dest_path}  
