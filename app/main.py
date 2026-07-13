@@ -14,11 +14,16 @@ from app.workers.tasks import process_image_job
 
 from typing import Optional
 
+from prometheus_fastapi_instrumentator import Instrumentator
+
+
 app = FastAPI(
     title="Async Job Processing System",
     description="Submit image-processing jobs, track status, and view results asynchronously.",
     version="1.0.0",
 )
+
+Instrumentator().instrument(app).expose(app)  # exposes GET /metrics
 
 @app.on_event("startup")
 def on_startup():

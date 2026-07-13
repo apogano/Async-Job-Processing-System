@@ -25,6 +25,8 @@ MarkupSafe==3.0.3
 packaging==26.2
 pillow==12.3.0
 pluggy==1.6.0
+prometheus-fastapi-instrumentator==8.0.2
+prometheus_client==0.25.0
 prompt_toolkit==3.0.52
 psycopg2-binary==2.9.12
 psycopg2-client==1.0.10
