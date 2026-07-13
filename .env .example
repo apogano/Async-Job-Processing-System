@@ -1,0 +1,4 @@
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/jobs
+REDIS_URL=redis://redis:6379/0
+MAX_JOBS_ATTEMPTS=3
+UPLOAD_DIR=/tmp/uploads

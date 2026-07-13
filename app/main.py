@@ -38,15 +38,6 @@ async def health():
     return {"status": "ok"}
     
     
-@app.get("/info")
-async def info():
-    """
-      Shows settings info - for dev only! 
-    """
-    return {
-        "database_url": settings.database_url
-    }
-    
 @app.post("/jobs", response_model=JobResponse, status_code=202)
 def create_job(job_in:JobCreate, db: Session = Depends(get_db)):
     """

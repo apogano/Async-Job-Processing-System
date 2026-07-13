@@ -69,7 +69,7 @@ def process_image_job(self, job_id: str):
         operations = payload.get("operations",[])
         
         if not source_path or not os.path.exists(source_path):
-            raise PermanentJobError("Source file not found: %s")
+            raise PermanentJobError(f"Source file not found: {source_path}")
             
         try:
             image = Image.open(source_path)
@@ -84,7 +84,7 @@ def process_image_job(self, job_id: str):
         except PermanentJobError:
             raise
         except Exception as exc:
-            raise PermanentJobError("Invalid operation:%s",exc)
+            raise PermanentJobError(f"Invalid operation: {exc}")
 
         output_filename = f"{uuid.uuid4()}.png"
         output_path = os.path.join(settings.upload_dir, "processed", output_filename)
@@ -138,18 +138,19 @@ def _apply_operation(image: Image.Image, operation: dict) -> Image.Image:
         return image.convert(fmt)
     if op_type == "watermark":
         drawing = ImageDraw.Draw(image)
-        font = ImageFont.truetype("RobotoBlack.ttf", 68)
+        font = ImageFont.load_default()
         text = " watermark  ©   "
-        text_w, text_h = drawing.textsize(text, font)
-        pos = w - text_w, (h - text_h) - 50
-            
-        c_text = Image.new('RGB', (text_w, (text_h)), color = '#000000')
-        drawing = ImageDraw.Draw(c_text)
-        
-        drawing.text((0,0), text, fill="#ffffff", font=font)
+        left, top, right, bottom = drawing.textbbox((0, 0), text, font=font)
+        text_w, text_h = right - left, bottom - top
+        pos = (image.width - text_w, image.height - text_h - 50)
+ 
+        c_text = Image.new('RGB', (text_w, text_h), color='#000000')
+        c_drawing = ImageDraw.Draw(c_text)
+        c_drawing.text((0, 0), text, fill="#ffffff", font=font)
         c_text.putalpha(100)
-           
+ 
         image.paste(c_text, pos, c_text)
+
         return image
     logger.warning("Unknown operation %s, skipping", op_type)
     return image
