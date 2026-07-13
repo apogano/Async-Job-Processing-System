@@ -197,3 +197,30 @@ def test_get_existing_job(client: TestClient):
     assert data["id"] == job_id
     assert data["type"] == "image_resize"    
 
+def test_post_retry_job(client: TestClient):
+    # Create a job
+    create_response = client.post(
+        "/jobs", 
+        json=job_correct_without_idempotency_key
+    )
+    job_id = create_response.json()["id"]
+
+    # Retry it
+    response = client.post(f"/jobs/{job_id}/retry")
+
+    assert response.status_code == 400 
+    assert response.json()["detail"] == "Only failed jobs can be retried"
+
+
+def test_delete_job(client: TestClient):
+    # Create a job
+    create_response = client.post(
+        "/jobs", 
+        json=job_correct_without_idempotency_key
+    )
+    job_id = create_response.json()["id"]
+
+    # Delete it
+    response = client.delete(f"/jobs/{job_id}")
+
+    assert response.status_code == 204

@@ -89,3 +89,35 @@ def get_job(job_id: str, db: Session = Depends(get_db)):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+@app.post("/jobs/{job_id}/retry", response_model=JobResponse)
+def retry_job(job_id: str, db: Session = Depends(get_db)):
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status != JobStatus.failed:
+        raise HTTPException(status_code=400, detail="Only failed jobs can be retried")
+
+    job.status = JobStatus.pending
+    job.attempts = 0
+    job.result = None
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    process_image_job.delay(str(job.id))
+
+    return job.to_dict()    
+    
+@app.delete("/jobs/{job_id}", status_code=204)
+def cancel_job(job_id: str, db: Session = Depends(get_db)):
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status not in [ JobStatus.pending, JobStatus.failed]:
+        raise HTTPException(
+            status_code=400, detail="Only pending or failed jobs can be cancelled"
+        )
+    db.delete(job)
+    db.commit()
+    return None
