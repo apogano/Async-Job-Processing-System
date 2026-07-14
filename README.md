@@ -9,22 +9,22 @@ You upload an image and submit a job describing what to do with it (resize, conv
 ## Architecture
 
 ```
-┌─────────────┐      ┌──────────────┐      ┌─────────────┐
+┌─────────────┐       ┌──────────────┐      ┌─────────────┐
 │  REST API   │─────▶│ Redis/Celery │─────▶│  Worker(s)  │
-│  (FastAPI)  │      │    Queue     │      │  (Celery)   │
-└─────┬───────┘      └──────────────┘      └──────┬──────┘
-      │                     ▲                     │
-      │                     │                     ▼
-      │              ┌─────────────┐        ┌─────────────┐
-      │              │ Celery Beat │        │ PostgreSQL  │
-      │              │ (scheduler) │        │ (job state) │
-      │              └─────────────┘        └─────────────┘
+│  (FastAPI)  │       │    Queue     │      │  (Celery)   │
+└─────┬───────┘       └──────────────┘      └──────┬──────┘
+      │                      ▲                     │
+      │                      │                     ▼
+      │               ┌─────────────┐        ┌─────────────┐
+      │               │ Celery Beat │        │ PostgreSQL  │
+      │               │ (scheduler) │        │ (job state) │
+      │               └─────────────┘        └─────────────┘
       ▼
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+┌─────────────┐       ┌─────────────┐      ┌─────────────┐
 │ Prometheus  │◀────▶│   Grafana   │      │   Flower    │
-│  /metrics   │      │ (dashboards)│      │ (task/worker│
-└─────────────┘      └─────────────┘      │  monitoring)│
-                                          └─────────────┘
+│  /metrics   │       │ (dashboards)│      │ (task/worker│
+└─────────────┘       └─────────────┘      │  monitoring)│
+                                           └─────────────┘
 ```
 
 The API and worker are separate processes — the API never does the actual image processing itself, it only enqueues work and reports on state stored in Postgres. This is the core design choice that makes the system "async" rather than just non-blocking. Celery Beat is a third, independent process: it only *schedules* recurring work onto the queue, it never executes tasks itself — that's still the worker's job.
